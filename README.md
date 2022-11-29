@@ -1,5 +1,5 @@
 [![license](https://img.shields.io/github/license/lfalck/AzureFunctionsPGPEncrypt.svg)]()
-# AzureFunctionsPGPEncrypt
+# AzureFunctionsPGPEncryptDecrypt
 
 Azure function which performs PGP encryption and decryption using [PgpCore](https://github.com/mattosaurus/PgpCore). The private and public key can be stored in an environment variable or in Azure Key Vault by using [Key Vault references](https://docs.microsoft.com/en-us/azure/app-service/app-service-key-vault-references).
 
