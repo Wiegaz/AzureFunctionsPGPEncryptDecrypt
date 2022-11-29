@@ -10,40 +10,30 @@ using System.Text;
 using PgpCore;
 using Org.BouncyCastle.Bcpg.OpenPgp;
 
-namespace AzureFunctionsPGPEncrypt
+namespace AzureFunctionsPGPEncryptDecrypt
 {
-    public static class PGPEncryptAndSign
+    public static class PGPEncrypt
     {
-        [FunctionName(nameof(PGPEncryptAndSign))]
+        [FunctionName(nameof(PGPEncrypt))]
         public static async Task<IActionResult> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequest req, ILogger log)
         {
-            log.LogInformation($"C# HTTP trigger function {nameof(PGPEncryptAndSign)} processed a request.");
+            log.LogInformation($"C# HTTP trigger function {nameof(PGPEncrypt)} processed a request.");
 
             string publicKeyBase64 = Environment.GetEnvironmentVariable("pgp-public-key");
-            string privateKeySignBase64 = Environment.GetEnvironmentVariable("pgp-private-key-sign");
-            string passPhraseSign = Environment.GetEnvironmentVariable("pgp-passphrase-sign");
 
             if (string.IsNullOrEmpty(publicKeyBase64))
             {
                 return new BadRequestObjectResult($"Please add a base64 encoded public key to an environment variable called pgp-public-key");
             }
 
-            if (string.IsNullOrEmpty(privateKeySignBase64))
-            {
-                return new BadRequestObjectResult($"Please add a base64 encoded private key to an environment variable called pgp-private-key-sign");
-            }
-
             byte[] publicKeyBytes = Convert.FromBase64String(publicKeyBase64);
             string publicKey = Encoding.UTF8.GetString(publicKeyBytes);
-
-            byte[] privateKeySignBytes = Convert.FromBase64String(privateKeySignBase64);
-            string privateKeySign = Encoding.UTF8.GetString(privateKeySignBytes);
 
             req.EnableBuffering(); //Make RequestBody Stream seekable
 
             try
             {
-                Stream encryptedData = await EncryptAndSignAsync(req.Body, publicKey, privateKeySign, passPhraseSign);
+                Stream encryptedData = await EncryptAsync(req.Body, publicKey);
                 return new OkObjectResult(encryptedData);
             }
             catch (PgpException pgpException)
@@ -52,7 +42,7 @@ namespace AzureFunctionsPGPEncrypt
             }
         }
 
-        private static async Task<Stream> EncryptAndSignAsync(Stream inputStream, string publicKey, string privateKey, string passPhrase)
+        private static async Task<Stream> EncryptAsync(Stream inputStream, string publicKey)
         {
             using (PGP pgp = new PGP())
             {
@@ -60,10 +50,8 @@ namespace AzureFunctionsPGPEncrypt
 
                 using (inputStream)
                 using (Stream publicKeyStream = publicKey.ToStream())
-                using (Stream privateKeyStream = privateKey.ToStream())
-
                 {
-                    await pgp.EncryptStreamAndSignAsync(inputStream, outputStream, publicKeyStream, privateKeyStream, passPhrase, true, true);
+                    await pgp.EncryptStreamAsync(inputStream, outputStream, publicKeyStream, true, true);
                     outputStream.Seek(0, SeekOrigin.Begin);
                     return outputStream;
                 }
